@@ -20,10 +20,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { plans, features } from '@/data/mockData';
 import { Plan, PlanStatus, BillingInterval } from '@/types/subscription';
-import { ArrowRight, Save } from 'lucide-react';
+import { ArrowRight, Save, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export default function PlanFormPage() {
   const { id } = useParams();
@@ -50,6 +55,10 @@ export default function PlanFormPage() {
 
   const [customBranches, setCustomBranches] = useState(false);
   const [customProviders, setCustomProviders] = useState(false);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [discountValue, setDiscountValue] = useState(0);
+  const [discountFrom, setDiscountFrom] = useState<Date | undefined>();
+  const [discountTo, setDiscountTo] = useState<Date | undefined>();
 
   useEffect(() => {
     if (isEditing) {
@@ -107,7 +116,7 @@ export default function PlanFormPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Accordion type="multiple" defaultValue={['general', 'pricing', 'features', 'limits']} className="space-y-4">
+          <Accordion type="multiple" defaultValue={['general', 'pricing', 'discount', 'features', 'limits']} className="space-y-4">
             {/* General Details */}
             <AccordionItem value="general" className="bg-card rounded-xl border border-border px-6">
               <AccordionTrigger className="text-lg font-bold">
@@ -141,6 +150,17 @@ export default function PlanFormPage() {
                     onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
                     placeholder="وصف مختصر للباقة يظهر في صفحة الأسعار"
                     rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>الوصف بالإنجليزية</Label>
+                  <Textarea
+                    value={formData.descriptionEn}
+                    onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                    placeholder="Brief description shown on the pricing page"
+                    rows={3}
+                    dir="ltr"
                   />
                 </div>
 
@@ -251,6 +271,115 @@ export default function PlanFormPage() {
                     </Label>
                   </div>
                 </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Discount Configuration */}
+            <AccordionItem value="discount" className="bg-card rounded-xl border border-border px-6">
+              <AccordionTrigger className="text-lg font-bold">
+                إعدادات الخصم
+              </AccordionTrigger>
+              <AccordionContent className="space-y-4 pb-6">
+                <p className="text-sm text-muted-foreground mb-2">
+                  أضف خصماً خاصاً بهذه الباقة يُطبّق تلقائياً خلال فترة الصلاحية
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>نوع الخصم</Label>
+                    <Select
+                      value={discountType}
+                      onValueChange={(value: 'percentage' | 'fixed') => setDiscountType(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
+                        <SelectItem value="fixed">مبلغ ثابت (ريال)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>قيمة الخصم {discountType === 'percentage' ? '(%)' : '(ريال)'}</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={discountType === 'percentage' ? 100 : undefined}
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(Number(e.target.value))}
+                      placeholder={discountType === 'percentage' ? 'مثال: 15' : 'مثال: 50'}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>تاريخ البداية</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-right font-normal",
+                            !discountFrom && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="ml-2 h-4 w-4" />
+                          {discountFrom ? format(discountFrom, 'dd MMM yyyy', { locale: ar }) : 'اختر تاريخ البداية'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={discountFrom}
+                          onSelect={setDiscountFrom}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>تاريخ الانتهاء</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-right font-normal",
+                            !discountTo && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="ml-2 h-4 w-4" />
+                          {discountTo ? format(discountTo, 'dd MMM yyyy', { locale: ar }) : 'اختر تاريخ الانتهاء'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={discountTo}
+                          onSelect={setDiscountTo}
+                          disabled={(date) => discountFrom ? date < discountFrom : false}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {discountValue > 0 && (
+                  <div className="bg-accent/30 rounded-lg p-4 border border-accent">
+                    <p className="text-sm font-medium text-foreground">
+                      ملخص الخصم: {discountType === 'percentage' ? `${discountValue}%` : `${discountValue} ريال`}
+                      {discountFrom && discountTo && (
+                        <span className="text-muted-foreground">
+                          {' '}• من {format(discountFrom, 'dd/MM/yyyy')} إلى {format(discountTo, 'dd/MM/yyyy')}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </AccordionContent>
             </AccordionItem>
 

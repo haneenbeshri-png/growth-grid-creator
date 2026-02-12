@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { CouponTable } from '@/components/coupons/CouponTable';
 import { DeleteConfirmDialog } from '@/components/dialogs/DeleteConfirmDialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { coupons as initialCoupons } from '@/data/mockData';
 import { Coupon } from '@/types/subscription';
-import { Plus } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -20,11 +28,53 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Power, PowerOff } from 'lucide-react';
 
+type SortOption = 'newest' | 'oldest' | 'highest_discount' | 'expiry';
+type StatusFilter = 'all' | 'active' | 'disabled' | 'expired';
+
 export default function CouponsPage() {
   const navigate = useNavigate();
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
   const [deleteCoupon, setDeleteCoupon] = useState<Coupon | null>(null);
   const [toggleCoupon, setToggleCoupon] = useState<Coupon | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+
+  const filteredCoupons = useMemo(() => {
+    let result = [...coupons];
+
+    // Search
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(c =>
+        c.code.toLowerCase().includes(q) ||
+        c.internalName.toLowerCase().includes(q)
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(c => c.status === statusFilter);
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'newest':
+        result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        break;
+      case 'oldest':
+        result.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        break;
+      case 'highest_discount':
+        result.sort((a, b) => b.discountValue - a.discountValue);
+        break;
+      case 'expiry':
+        result.sort((a, b) => a.expiryDate.getTime() - b.expiryDate.getTime());
+        break;
+    }
+
+    return result;
+  }, [coupons, searchQuery, statusFilter, sortBy]);
 
   const handleEdit = (coupon: Coupon) => {
     navigate(`/coupons/${coupon.id}/edit`);
@@ -110,13 +160,57 @@ export default function CouponsPage() {
           </div>
         </div>
 
+        {/* Filters & Sort */}
+        <div className="bg-card rounded-xl border border-border p-4 mb-6 flex flex-wrap items-center gap-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="البحث بالكود أو الاسم..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={(v: StatusFilter) => setStatusFilter(v)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الحالات</SelectItem>
+                <SelectItem value="active">نشط</SelectItem>
+                <SelectItem value="disabled">معطل</SelectItem>
+                <SelectItem value="expired">منتهي</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Select value={sortBy} onValueChange={(v: SortOption) => setSortBy(v)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="ترتيب حسب" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">الأحدث</SelectItem>
+              <SelectItem value="oldest">الأقدم</SelectItem>
+              <SelectItem value="highest_discount">أعلى خصم</SelectItem>
+              <SelectItem value="expiry">تاريخ الانتهاء</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Table */}
         <CouponTable
-          coupons={coupons}
+          coupons={filteredCoupons}
           onEdit={handleEdit}
           onToggle={handleToggle}
           onDelete={handleDelete}
         />
+
+        {filteredCoupons.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            لا توجد كوبونات مطابقة للبحث
+          </div>
+        )}
 
         {/* Delete Dialog */}
         <DeleteConfirmDialog
