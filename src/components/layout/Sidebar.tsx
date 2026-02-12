@@ -5,6 +5,7 @@ import {
   Gift, 
   Ticket, 
   LayoutDashboard,
+  Users,
   Settings,
   ChevronLeft
 } from 'lucide-react';
@@ -15,6 +16,7 @@ const navigation = [
   { name: 'إدارة الخطط', href: '/plans', icon: CreditCard },
   { name: 'الإضافات', href: '/addons', icon: Gift },
   { name: 'الكوبونات', href: '/coupons', icon: Ticket },
+  { name: 'المستخدمين', href: '/users', icon: Users },
   { name: 'الإعدادات', href: '/settings', icon: Settings },
 ];
 

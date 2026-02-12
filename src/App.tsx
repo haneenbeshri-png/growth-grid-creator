@@ -10,6 +10,7 @@ import AddOnsPage from "./pages/AddOnsPage";
 import AddOnFormPage from "./pages/AddOnFormPage";
 import CouponsPage from "./pages/CouponsPage";
 import CouponFormPage from "./pages/CouponFormPage";
+import UsersPage from "./pages/UsersPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/coupons" element={<CouponsPage />} />
           <Route path="/coupons/new" element={<CouponFormPage />} />
           <Route path="/coupons/:id/edit" element={<CouponFormPage />} />
+          <Route path="/users" element={<UsersPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
