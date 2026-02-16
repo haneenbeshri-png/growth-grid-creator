@@ -1,16 +1,23 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import {
   ArrowRight, Mail, Phone, KeyRound, Calendar, DollarSign, Clock,
-  Building2, Users, MessageSquare,
+  Building2, Users, MessageSquare, Pencil, Copy, Check,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { type UserStatus } from './UsersPage';
 
 const userStatusConfig: Record<UserStatus, { label: string; className: string }> = {
@@ -100,13 +107,79 @@ const paymentStatusMap = {
   overdue: { label: 'متأخر', className: 'bg-destructive/10 text-destructive border-destructive/20' },
 };
 
+function generateTempPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+  let pass = '';
+  for (let i = 0; i < 12; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+  return pass;
+}
+
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const profile = mockProfiles[id || ''] || mockProfiles['USR-001'];
+  const [profile, setProfile] = useState(() => mockProfiles[id || ''] || mockProfiles['USR-001']);
+
+  // Reset password dialog
+  const [resetOpen, setResetOpen] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
+  const [passwordCopied, setPasswordCopied] = useState(false);
+
+  // Edit profile dialog
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    businessName: profile.businessName,
+    ownerName: profile.ownerName,
+    phone: profile.phone,
+    email: profile.email,
+  });
 
   const branchPercent = (profile.usage.branches.used / profile.usage.branches.total) * 100;
   const staffPercent = (profile.usage.staff.used / profile.usage.staff.total) * 100;
+
+  const handleResetPassword = () => {
+    const newPass = generateTempPassword();
+    setTempPassword(newPass);
+    setPasswordCopied(false);
+    setResetOpen(true);
+  };
+
+  const confirmResetPassword = () => {
+    toast.success(`تم إعادة تعيين كلمة المرور لـ ${profile.businessName}`);
+    setResetOpen(false);
+    setTempPassword('');
+  };
+
+  const copyPassword = () => {
+    navigator.clipboard.writeText(tempPassword);
+    setPasswordCopied(true);
+    toast.success('تم نسخ كلمة المرور');
+  };
+
+  const handleEditSave = () => {
+    if (!editForm.businessName.trim() || !editForm.ownerName.trim() || !editForm.phone.trim() || !editForm.email.trim()) {
+      toast.error('يرجى تعبئة جميع الحقول');
+      return;
+    }
+    setProfile(prev => ({
+      ...prev,
+      businessName: editForm.businessName,
+      ownerName: editForm.ownerName,
+      phone: editForm.phone,
+      email: editForm.email,
+    }));
+    toast.success('تم تحديث بيانات المستخدم بنجاح');
+    setEditOpen(false);
+  };
+
+  const openEdit = () => {
+    setEditForm({
+      businessName: profile.businessName,
+      ownerName: profile.ownerName,
+      phone: profile.phone,
+      email: profile.email,
+    });
+    setEditOpen(true);
+  };
 
   return (
     <MainLayout>
@@ -120,7 +193,6 @@ export default function UserProfilePage() {
         {/* Header Card */}
         <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex flex-col md:flex-row items-start gap-6">
-            {/* Logo & Name */}
             <div className="w-16 h-16 rounded-xl bg-accent-teal/10 flex items-center justify-center text-3xl shrink-0">
               {profile.businessLogo}
             </div>
@@ -130,8 +202,11 @@ export default function UserProfilePage() {
                 <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold border ${userStatusConfig[profile.status].className}`}>
                   {userStatusConfig[profile.status].label}
                 </span>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7 mr-auto" onClick={openEdit}>
+                  <Pencil className="w-3.5 h-3.5" />
+                  تعديل البيانات
+                </Button>
               </div>
-              {/* Meta row */}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
@@ -146,7 +221,6 @@ export default function UserProfilePage() {
                   إجمالي الإيرادات: <strong className="text-foreground">{profile.totalRevenue.toLocaleString()} ريال</strong>
                 </span>
               </div>
-              {/* Contact */}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <Mail className="w-4 h-4" /> {profile.email}
@@ -154,7 +228,7 @@ export default function UserProfilePage() {
                 <span className="flex items-center gap-1.5 text-muted-foreground" dir="ltr">
                   <Phone className="w-4 h-4" /> {profile.phone}
                 </span>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7" onClick={handleResetPassword}>
                   <KeyRound className="w-3.5 h-3.5" />
                   إعادة تعيين كلمة المرور
                 </Button>
@@ -169,7 +243,6 @@ export default function UserProfilePage() {
             <h2 className="text-lg font-bold text-foreground">الاشتراك</h2>
           </div>
           <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Core Plan */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground">تفاصيل الباقة الحالية</h3>
               <div className="bg-muted/30 rounded-lg p-4 space-y-3">
@@ -194,7 +267,6 @@ export default function UserProfilePage() {
               </div>
             </div>
 
-            {/* Active Add-ons */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-muted-foreground">الإضافات النشطة</h3>
               {profile.addons.length > 0 ? (
@@ -239,7 +311,6 @@ export default function UserProfilePage() {
             <h2 className="text-lg font-bold text-foreground">نظرة عامة على الاستخدام</h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Branches */}
             <div className="space-y-3 bg-muted/30 rounded-lg p-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-accent-teal/10 flex items-center justify-center">
@@ -257,7 +328,6 @@ export default function UserProfilePage() {
               </p>
             </div>
 
-            {/* Staff */}
             <div className="space-y-3 bg-muted/30 rounded-lg p-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -275,7 +345,6 @@ export default function UserProfilePage() {
               </p>
             </div>
 
-            {/* SMS */}
             <div className="space-y-3 bg-muted/30 rounded-lg p-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-accent-warm/20 flex items-center justify-center">
@@ -295,6 +364,105 @@ export default function UserProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-2">
+              <KeyRound className="w-6 h-6 text-warning" />
+            </div>
+            <DialogTitle className="text-center">إعادة تعيين كلمة المرور</DialogTitle>
+            <DialogDescription className="text-center">
+              سيتم إنشاء كلمة مرور مؤقتة لحساب <strong className="text-foreground">{profile.businessName}</strong>. يجب مشاركتها مع المالك ليتمكن من تسجيل الدخول وتغييرها.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">المالك</Label>
+              <p className="text-sm font-medium text-foreground">{profile.ownerName} — {profile.email}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">كلمة المرور المؤقتة</Label>
+              <div className="flex items-center gap-2">
+                <Input value={tempPassword} readOnly className="font-mono text-base tracking-wider" dir="ltr" />
+                <Button variant="outline" size="icon" className="shrink-0" onClick={copyPassword}>
+                  {passwordCopied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">سيُطلب من المستخدم تغيير كلمة المرور عند تسجيل الدخول القادم.</p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setResetOpen(false)}>إلغاء</Button>
+            <Button onClick={confirmResetPassword} className="bg-warning text-warning-foreground hover:bg-warning/90">
+              تأكيد إعادة التعيين
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <Pencil className="w-6 h-6 text-primary" />
+            </div>
+            <DialogTitle className="text-center">تعديل بيانات المستخدم</DialogTitle>
+            <DialogDescription className="text-center">
+              تعديل البيانات الأساسية لحساب <strong className="text-foreground">{profile.businessName}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-business">الاسم التجاري</Label>
+              <Input
+                id="edit-business"
+                value={editForm.businessName}
+                onChange={e => setEditForm(f => ({ ...f, businessName: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-owner">اسم المالك</Label>
+              <Input
+                id="edit-owner"
+                value={editForm.ownerName}
+                onChange={e => setEditForm(f => ({ ...f, ownerName: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">البريد الإلكتروني</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">رقم الهاتف</Label>
+                <Input
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                  dir="ltr"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setEditOpen(false)}>إلغاء</Button>
+            <Button onClick={handleEditSave}>حفظ التعديلات</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
