@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import {
@@ -36,6 +37,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Search, MoreHorizontal, UserCog, Pencil, Ban, Archive, CreditCard, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -110,6 +119,8 @@ export default function UsersPage() {
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
   const [suspendUser, setSuspendUser] = useState<AppUser | null>(null);
   const [archiveUser, setArchiveUser] = useState<AppUser | null>(null);
+  const [editUser, setEditUser] = useState<AppUser | null>(null);
+  const [editForm, setEditForm] = useState({ businessName: '', ownerName: '', phone: '', email: '' });
 
   const filteredUsers = useMemo(() => {
     let result = [...users];
@@ -147,6 +158,23 @@ export default function UsersPage() {
       setUsers(users.filter(u => u.id !== archiveUser.id));
       toast.success(`تم أرشفة حساب ${archiveUser.businessName}`);
       setArchiveUser(null);
+    }
+  };
+
+  const openEditUser = (user: AppUser) => {
+    setEditForm({ businessName: user.businessName, ownerName: user.ownerName, phone: user.phone, email: user.email });
+    setEditUser(user);
+  };
+
+  const saveEditUser = () => {
+    if (!editForm.businessName.trim() || !editForm.ownerName.trim() || !editForm.phone.trim() || !editForm.email.trim()) {
+      toast.error('يرجى تعبئة جميع الحقول');
+      return;
+    }
+    if (editUser) {
+      setUsers(users.map(u => u.id === editUser.id ? { ...u, ...editForm } : u));
+      toast.success(`تم تحديث بيانات ${editForm.businessName}`);
+      setEditUser(null);
     }
   };
 
@@ -296,7 +324,7 @@ export default function UsersPage() {
                             <UserCog className="w-4 h-4" />
                             عرض الملف الشخصي
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 cursor-pointer">
+                          <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => openEditUser(user)}>
                             <Pencil className="w-4 h-4" />
                             تعديل البيانات
                           </DropdownMenuItem>
@@ -375,6 +403,45 @@ export default function UsersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Edit User Dialog */}
+        <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                <Pencil className="w-6 h-6 text-primary" />
+              </div>
+              <DialogTitle className="text-center">تعديل بيانات المستخدم</DialogTitle>
+              <DialogDescription className="text-center">
+                تعديل البيانات الأساسية لحساب <strong className="text-foreground">{editUser?.businessName}</strong>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-business">الاسم التجاري</Label>
+                <Input id="edit-business" value={editForm.businessName} onChange={e => setEditForm(f => ({ ...f, businessName: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-owner">اسم المالك</Label>
+                <Input id="edit-owner" value={editForm.ownerName} onChange={e => setEditForm(f => ({ ...f, ownerName: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">البريد الإلكتروني</Label>
+                  <Input id="edit-email" type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} dir="ltr" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-phone">رقم الهاتف</Label>
+                  <Input id="edit-phone" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setEditUser(null)}>إلغاء</Button>
+              <Button onClick={saveEditUser}>حفظ التعديلات</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
