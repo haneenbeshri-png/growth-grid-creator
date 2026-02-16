@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -101,6 +102,7 @@ type DebtFilter = 'all' | 'with_debt' | 'no_debt';
 type PlanFilter = 'all' | 'basic' | 'pro' | 'business';
 
 export default function UsersPage() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<AppUser[]>(mockUsers);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
@@ -290,7 +292,7 @@ export default function UsersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover border border-border shadow-lg z-50">
-                          <DropdownMenuItem className="gap-2 cursor-pointer">
+                          <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/users/${user.id}`)}>
                             <UserCog className="w-4 h-4" />
                             عرض الملف الشخصي
                           </DropdownMenuItem>
