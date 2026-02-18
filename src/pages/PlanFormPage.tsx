@@ -22,9 +22,9 @@ import {
 } from '@/components/ui/accordion';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { plans, features } from '@/data/mockData';
+import { plans, features as initialFeatures } from '@/data/mockData';
 import { Plan, PlanStatus, BillingInterval } from '@/types/subscription';
-import { ArrowRight, Save, CalendarIcon } from 'lucide-react';
+import { ArrowRight, Save, CalendarIcon, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -59,6 +59,10 @@ export default function PlanFormPage() {
   const [discountValue, setDiscountValue] = useState(0);
   const [discountFrom, setDiscountFrom] = useState<Date | undefined>();
   const [discountTo, setDiscountTo] = useState<Date | undefined>();
+  const [featuresList, setFeaturesList] = useState(initialFeatures);
+  const [newFeatureAr, setNewFeatureAr] = useState('');
+  const [newFeatureEn, setNewFeatureEn] = useState('');
+  const [showAddFeature, setShowAddFeature] = useState(false);
 
   useEffect(() => {
     if (isEditing) {
@@ -389,24 +393,94 @@ export default function PlanFormPage() {
                 المميزات
               </AccordionTrigger>
               <AccordionContent className="pb-6">
-                <p className="text-sm text-muted-foreground mb-4">
-                  اختر المميزات المتاحة في هذه الباقة. المميزات غير المحددة ستظهر كـ "ترقية مطلوبة"
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    اختر المميزات المتاحة في هذه الباقة
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setShowAddFeature(!showAddFeature)}
+                  >
+                    <Plus className="w-4 h-4" />
+                    إضافة ميزة جديدة
+                  </Button>
+                </div>
+
+                {showAddFeature && (
+                  <div className="bg-accent/30 rounded-lg p-4 border border-border mb-4 space-y-3">
+                    <p className="text-sm font-medium">إضافة ميزة جديدة</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        value={newFeatureAr}
+                        onChange={(e) => setNewFeatureAr(e.target.value)}
+                        placeholder="اسم الميزة بالعربية"
+                      />
+                      <Input
+                        value={newFeatureEn}
+                        onChange={(e) => setNewFeatureEn(e.target.value)}
+                        placeholder="Feature name in English"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setShowAddFeature(false); setNewFeatureAr(''); setNewFeatureEn(''); }}
+                      >
+                        إلغاء
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          if (!newFeatureAr.trim()) {
+                            toast.error('يرجى إدخال اسم الميزة بالعربية');
+                            return;
+                          }
+                          const newId = `f_${Date.now()}`;
+                          setFeaturesList([...featuresList, {
+                            id: newId,
+                            nameAr: newFeatureAr.trim(),
+                            nameEn: newFeatureEn.trim() || newFeatureAr.trim(),
+                            description: '',
+                          }]);
+                          setFormData({ ...formData, features: [...(formData.features || []), newId] });
+                          setNewFeatureAr('');
+                          setNewFeatureEn('');
+                          setShowAddFeature(false);
+                          toast.success('تمت إضافة الميزة بنجاح');
+                        }}
+                      >
+                        إضافة
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
-                  {features.map((feature) => (
-                    <div
+                  {featuresList.map((feature) => (
+                    <label
                       key={feature.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                      htmlFor={`feature-${feature.id}`}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer"
                     >
-                      <Switch
+                      <Checkbox
+                        id={`feature-${feature.id}`}
                         checked={formData.features?.includes(feature.id)}
                         onCheckedChange={() => toggleFeature(feature.id)}
                       />
                       <div>
                         <p className="font-medium text-sm">{feature.nameAr}</p>
-                        <p className="text-xs text-muted-foreground">{feature.description}</p>
+                        {feature.nameEn && (
+                          <p className="text-xs text-muted-foreground" dir="ltr">{feature.nameEn}</p>
+                        )}
                       </div>
-                    </div>
+                    </label>
                   ))}
                 </div>
               </AccordionContent>
