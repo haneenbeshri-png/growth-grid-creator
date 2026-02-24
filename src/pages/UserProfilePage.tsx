@@ -82,6 +82,9 @@ interface UserProfile {
     smsCredits: number;
   };
   pausedAt?: Date;
+  graceExtendedAt?: Date;
+  graceExtendedDays?: number;
+  graceExtendedNote?: string;
 }
 
 const mockProfiles: Record<string, UserProfile> = {
@@ -228,7 +231,14 @@ export default function UserProfilePage() {
     if (!days || days <= 0) { toast.error('يرجى إدخال عدد أيام صحيح'); return; }
     if (!extendNote.trim()) { toast.error('يرجى إدخال سبب التمديد'); return; }
     const newDate = new Date(Date.now() + days * 86400000);
-    setProfile(prev => ({ ...prev, status: 'grace' as UserStatus, renewalDate: newDate }));
+    setProfile(prev => ({
+      ...prev,
+      status: 'grace' as UserStatus,
+      renewalDate: newDate,
+      graceExtendedAt: new Date(),
+      graceExtendedDays: days,
+      graceExtendedNote: extendNote.trim(),
+    }));
     toast.success(`تم تمديد المهلة ${days} يوم حتى ${format(newDate, 'dd/MM/yyyy')}`);
     setExtendOpen(false);
     setExtendDays('');
@@ -397,6 +407,22 @@ export default function UserProfilePage() {
                   {profile.status === 'paused' && profile.pausedAt && (
                     <div className="mt-2 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
                       ⏸️ متوقف منذ {format(profile.pausedAt, 'dd/MM/yyyy')} ({Math.ceil((Date.now() - profile.pausedAt.getTime()) / 86400000)} يوم)
+                    </div>
+                  )}
+                  {profile.status === 'grace' && profile.graceExtendedAt && profile.graceExtendedDays && (
+                    <div className="mt-2 p-3 bg-warning/5 border border-warning/20 rounded-lg text-sm space-y-1">
+                      <p className="font-semibold text-warning flex items-center gap-1.5">
+                        <Clock className="w-4 h-4" />
+                        مهلة {profile.graceExtendedDays} يوم
+                      </p>
+                      <p className="text-muted-foreground">
+                        أُضيفت بتاريخ {format(profile.graceExtendedAt, 'dd/MM/yyyy')}
+                      </p>
+                      {profile.graceExtendedNote && (
+                        <p className="text-muted-foreground text-xs">
+                          السبب: {profile.graceExtendedNote}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

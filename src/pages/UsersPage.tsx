@@ -45,7 +45,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Search, MoreHorizontal, UserCog, Pencil, Ban, Archive, CreditCard, SlidersHorizontal } from 'lucide-react';
+import { Search, MoreHorizontal, UserCog, Pencil, Ban, Archive, CreditCard, SlidersHorizontal, ShieldCheck, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -65,6 +65,9 @@ interface AppUser {
   lastLogin: Date;
   hasDebt: boolean;
   debtAmount: number;
+  graceExtendedAt?: Date;
+  graceExtendedDays?: number;
+  previousStatus?: UserStatus;
 }
 
 const userStatusConfig: Record<UserStatus, { label: string; className: string }> = {
@@ -82,7 +85,7 @@ const mockUsers: AppUser[] = [
   { id: 'USR-001', businessName: 'صالون الأناقة', ownerName: 'أحمد محمد', phone: '0501234567', email: 'ahmed@elegance.sa', currentPlan: 'الاحترافية سنوي', planIcon: '⭐', status: 'active', expiryDate: new Date('2026-06-15'), lastLogin: new Date(Date.now() - 2 * 60 * 60 * 1000), hasDebt: false, debtAmount: 0 },
   { id: 'USR-002', businessName: 'مركز لمسة جمال', ownerName: 'سارة العلي', phone: '0559876543', email: 'sara@lamsa.sa', currentPlan: 'الأساسية شهري', planIcon: '📦', status: 'active', expiryDate: new Date('2026-03-01'), lastLogin: new Date(Date.now() - 24 * 60 * 60 * 1000), hasDebt: true, debtAmount: 250 },
   { id: 'USR-003', businessName: 'باربر شوب', ownerName: 'خالد الحربي', phone: '0541112233', email: 'khalid@barber.sa', currentPlan: 'الأعمال شهري', planIcon: '🏢', status: 'trial', expiryDate: new Date('2026-02-28'), lastLogin: new Date(Date.now() - 30 * 60 * 1000), hasDebt: false, debtAmount: 0 },
-  { id: 'USR-004', businessName: 'سبا الهدوء', ownerName: 'نورة السالم', phone: '0567778899', email: 'noura@spa.sa', currentPlan: 'الاحترافية شهري', planIcon: '⭐', status: 'grace', expiryDate: new Date('2026-02-10'), lastLogin: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), hasDebt: true, debtAmount: 500 },
+  { id: 'USR-004', businessName: 'سبا الهدوء', ownerName: 'نورة السالم', phone: '0567778899', email: 'noura@spa.sa', currentPlan: 'الاحترافية شهري', planIcon: '⭐', status: 'grace', expiryDate: new Date('2026-02-10'), lastLogin: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), hasDebt: true, debtAmount: 500, graceExtendedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), graceExtendedDays: 7 },
   { id: 'USR-005', businessName: 'صالون الورد', ownerName: 'فاطمة العمري', phone: '0533334444', email: 'fatma@ward.sa', currentPlan: 'الأساسية شهري', planIcon: '📦', status: 'expired', expiryDate: new Date('2026-01-15'), lastLogin: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), hasDebt: true, debtAmount: 99 },
   { id: 'USR-006', businessName: 'ستايل بلس', ownerName: 'عمر الشهري', phone: '0522225555', email: 'omar@style.sa', currentPlan: 'الاحترافية سنوي', planIcon: '⭐', status: 'suspended', expiryDate: new Date('2026-08-20'), lastLogin: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), hasDebt: true, debtAmount: 1500 },
   { id: 'USR-007', businessName: 'صالون الأمل', ownerName: 'ريم الدوسري', phone: '0588889999', email: 'reem@amal.sa', currentPlan: 'الأعمال سنوي', planIcon: '🏢', status: 'active', expiryDate: new Date('2027-01-10'), lastLogin: new Date(Date.now() - 6 * 60 * 60 * 1000), hasDebt: false, debtAmount: 0 },
@@ -147,10 +150,16 @@ export default function UsersPage() {
 
   const confirmSuspend = () => {
     if (suspendUser) {
-      setUsers(users.map(u => u.id === suspendUser.id ? { ...u, status: 'suspended' as UserStatus } : u));
+      setUsers(users.map(u => u.id === suspendUser.id ? { ...u, status: 'suspended' as UserStatus, previousStatus: u.status } : u));
       toast.success(`تم إيقاف حساب ${suspendUser.businessName}`);
       setSuspendUser(null);
     }
+  };
+
+  const handleUnsuspend = (user: AppUser) => {
+    const restoreStatus = user.previousStatus || 'active';
+    setUsers(users.map(u => u.id === user.id ? { ...u, status: restoreStatus as UserStatus, previousStatus: undefined } : u));
+    toast.success(`تم إعادة تفعيل حساب ${user.businessName}`);
   };
 
   const confirmArchive = () => {
@@ -282,9 +291,22 @@ export default function UsersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${userStatusConfig[user.status].className}`}>
-                        {userStatusConfig[user.status].label}
-                      </span>
+                      <div>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${userStatusConfig[user.status].className}`}>
+                          {userStatusConfig[user.status].label}
+                        </span>
+                        {user.status === 'grace' && user.graceExtendedAt && user.graceExtendedDays && (
+                          <div className="mt-1.5 text-xs text-warning space-y-0.5">
+                            <p className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              مهلة {user.graceExtendedDays} يوم
+                            </p>
+                            <p className="text-muted-foreground">
+                              أُضيفت {format(user.graceExtendedAt, 'dd/MM/yyyy')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -336,6 +358,15 @@ export default function UsersPage() {
                             >
                               <Ban className="w-4 h-4" />
                               إيقاف الحساب
+                            </DropdownMenuItem>
+                          )}
+                          {user.status === 'suspended' && (
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer text-success"
+                              onClick={() => handleUnsuspend(user)}
+                            >
+                              <ShieldCheck className="w-4 h-4" />
+                              التراجع عن الإيقاف
                             </DropdownMenuItem>
                           )}
                           {(user.status === 'expired' || user.status === 'cancelled') && (
