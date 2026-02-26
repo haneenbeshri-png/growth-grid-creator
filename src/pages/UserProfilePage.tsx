@@ -41,6 +41,7 @@ const userStatusConfig: Record<UserStatus, { label: string; className: string }>
   paused: { label: 'متوقف', className: 'bg-muted text-muted-foreground border-muted' },
   cancelled: { label: 'ملغي', className: 'bg-archive/10 text-archive border-archive/20' },
   pending: { label: 'قيد الانتظار', className: 'bg-draft/10 text-draft border-draft/20' },
+  invited: { label: 'مدعو - بانتظار التفعيل', className: 'bg-info/10 text-info border-info/20' },
 };
 
 interface Branch {

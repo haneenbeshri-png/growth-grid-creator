@@ -45,12 +45,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Search, MoreHorizontal, UserCog, Pencil, Ban, Archive, CreditCard, SlidersHorizontal, ShieldCheck, Clock } from 'lucide-react';
+import { Search, MoreHorizontal, UserCog, Pencil, Ban, Archive, CreditCard, SlidersHorizontal, ShieldCheck, Clock, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-export type UserStatus = 'active' | 'trial' | 'grace' | 'expired' | 'suspended' | 'paused' | 'cancelled' | 'pending';
+export type UserStatus = 'active' | 'trial' | 'grace' | 'expired' | 'suspended' | 'paused' | 'cancelled' | 'pending' | 'invited';
 
 interface AppUser {
   id: string;
@@ -79,6 +79,7 @@ const userStatusConfig: Record<UserStatus, { label: string; className: string }>
   paused: { label: 'متوقف', className: 'bg-muted text-muted-foreground border-muted' },
   cancelled: { label: 'ملغي', className: 'bg-archive/10 text-archive border-archive/20' },
   pending: { label: 'قيد الانتظار', className: 'bg-draft/10 text-draft border-draft/20' },
+  invited: { label: 'مدعو - بانتظار التفعيل', className: 'bg-info/10 text-info border-info/20' },
 };
 
 const mockUsers: AppUser[] = [
@@ -196,6 +197,10 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold text-foreground mb-2">إدارة المستخدمين</h1>
             <p className="text-muted-foreground">عرض وإدارة جميع حسابات العملاء</p>
           </div>
+          <Button className="gap-2" onClick={() => navigate('/users/invite')}>
+            <UserPlus className="w-4 h-4" />
+            دعوة مستخدم جديد
+          </Button>
         </div>
 
         {/* Search & Filters */}
@@ -225,6 +230,7 @@ export default function UsersPage() {
                 <SelectItem value="paused">متوقف</SelectItem>
                 <SelectItem value="cancelled">ملغي</SelectItem>
                 <SelectItem value="pending">قيد الانتظار</SelectItem>
+                <SelectItem value="invited">مدعو</SelectItem>
               </SelectContent>
             </Select>
           </div>
