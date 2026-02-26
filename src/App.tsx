@@ -12,6 +12,7 @@ import CouponsPage from "./pages/CouponsPage";
 import CouponFormPage from "./pages/CouponFormPage";
 import UsersPage from "./pages/UsersPage";
 import UserProfilePage from "./pages/UserProfilePage";
+import InviteUserPage from "./pages/InviteUserPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/coupons/new" element={<CouponFormPage />} />
           <Route path="/coupons/:id/edit" element={<CouponFormPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/users/invite" element={<InviteUserPage />} />
           <Route path="/users/:id" element={<UserProfilePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
